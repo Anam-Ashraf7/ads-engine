@@ -18,7 +18,7 @@
 //   server/logs/cap-YYYY-MM.jsonl.
 import { createHmac } from 'node:crypto';
 import { createServer } from 'node:http';
-import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createGate, hostingConfig, serveDashboard } from './hosting.mjs';
@@ -39,6 +39,17 @@ function loadEnv() {
       if (m) env[m[1]] = m[2];
     }
   } catch {
+    const set = process.env.AE_ENV_FILE;
+    if (set) {
+      let names;
+      try {
+        names = readdirSync(dirname(resolve(HERE, set))).join(', ') || 'none';
+      } catch {
+        names = 'that folder does not exist';
+      }
+      throw new Error(`AE_ENV_FILE is ${set}, but that file can't be read. Files found in its folder: ${names}.`);
+    }
+    if (process.env.RENDER) throw new Error('AE_ENV_FILE is not set. On Render, add the environment variable AE_ENV_FILE=/etc/secrets/server.env.');
     throw new Error('server/.env.local is missing. Copy server/.env.example and fill it in.');
   }
   const path = (p) => (isAbsolute(p) ? p : resolve(HERE, p));
