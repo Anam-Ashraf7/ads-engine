@@ -1,0 +1,31 @@
+{
+  "name": "network-mockups",
+  "version": "0.0.0",
+  "description": "PROTOTYPE: clickable mockups of the Ads engine dashboards with made-up data, plus a Google Ads test-account check.",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit",
+    "server": "node server/gads-server.mjs",
+    "dev:live": "node server/dev-live.mjs",
+    "login": "node server/login.mjs",
+    "test:meta": "node --test server/meta.test.mjs"
+  },
+  "dependencies": {
+    "@fontsource-variable/archivo": "^5.2.5",
+    "@fontsource-variable/inter": "^5.2.5",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "react-router-dom": "^7.18.4"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.1.2",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  }
+}

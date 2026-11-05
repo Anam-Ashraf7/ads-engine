@@ -1,0 +1,11 @@
+node_modules
+dist
+*.tsbuildinfo
+# Local design tool working files
+.impeccable/
+# These screens were taken against the real Google Ads connection
+screenshots/standard-6-api-check.png
+screenshots/standard-6b-live-campaigns.png
+screenshots/standard-7a-live-api-check.png
+screenshots/standard-7b-live-campaigns.png
+screenshots/standard-8-meta-box.png

@@ -1,0 +1,15 @@
+# Render static site: the dashboard with sample data only. The Google Ads server (server/) is deliberately not deployed:
+# the login is a browser-only demo check, so it must never sit in front of a real Google Ads connection.
+services:
+  - type: web
+    name: ads-engine
+    runtime: static
+    buildCommand: npm ci --include=dev && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html

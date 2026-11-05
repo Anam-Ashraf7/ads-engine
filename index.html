@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ads engine</title>
+    <meta name="description" content="Ads engine is a dashboard for a small team running ads across a network of about 200 websites." />
+    <script>
+      // The public home page is plain HTML in #root. Anyone signed in, or on another page, goes straight to the app.
+      try {
+        if (location.pathname !== '/' || localStorage.getItem('ae.signedIn') === '1') document.documentElement.setAttribute('data-app', '');
+      } catch (e) {
+        if (location.pathname !== '/') document.documentElement.setAttribute('data-app', '');
+      }
+    </script>
+    <style>
+      [data-app] #home { display: none; }
+      #home { max-width: 720px; margin: 0 auto; padding: 32px 20px 56px; color: #111827; font: 16px/1.6 'Inter Variable', system-ui, -apple-system, 'Segoe UI', sans-serif; }
+      #home header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 56px; }
+      #home .name { font-weight: 650; font-size: 17px; }
+      #home a { color: #2563eb; }
+      #home .login { padding: 8px 16px; border-radius: 6px; background: #2563eb; color: #fff; font-size: 14px; font-weight: 600; text-decoration: none; }
+      #home h1 { margin: 0 0 16px; font-size: clamp(28px, 6vw, 38px); line-height: 1.15; letter-spacing: -0.02em; }
+      #home h2 { margin: 40px 0 8px; font-size: 18px; }
+      #home p, #home ul { margin: 0 0 12px; color: #4b5563; }
+      #home ul { padding-left: 20px; }
+      #home footer { margin-top: 56px; padding-top: 20px; border-top: 1px solid #e5e7eb; font-size: 14px; color: #6b7280; }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div id="home">
+        <header>
+          <span class="name">Ads engine</span>
+          <a class="login" href="/login">Log in</a>
+        </header>
+        <main>
+          <h1>Run ads across a whole network of websites from one dashboard</h1>
+          <p>Ads engine is a dashboard for a small team running about 200 websites as one business. It shows which sites earn more than they cost and what needs attention today, and it keeps ad spending inside set limits.</p>
+          <h2>What it does</h2>
+          <ul>
+            <li>Shows each site's ad spend, visits, earnings and alerts, compared with similar sites.</li>
+            <li>Lets the team pause campaigns, change daily budgets and set a monthly spending cap.</li>
+            <li>Tracks sponsor deals and earnings next to what each site costs.</li>
+          </ul>
+          <h2>How it uses Google data</h2>
+          <p>With the permission of the person who signs in with Google, Ads engine uses the Google Ads API to read campaigns, budgets, spending and conversion settings for the Google Ads accounts the team connects. It also makes the changes the team asks for, and applies the spending cap the team sets. It does not sell this data. Full details are in the <a href="/privacy.html">privacy policy</a>.</p>
+          <p>This public copy of the dashboard shows made-up sample data and isn't connected to any Google account.</p>
+        </main>
+        <footer>
+          Ads engine team · <a href="/privacy.html">Privacy policy</a> · <a href="mailto:anam@xavier.ai">anam@xavier.ai</a> · <a href="mailto:joao@xavier.ai">joao@xavier.ai</a>
+        </footer>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
