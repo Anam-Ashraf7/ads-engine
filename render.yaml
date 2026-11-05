@@ -1,15 +1,19 @@
-# Render static site: the dashboard with sample data only. The Google Ads server (server/) is deliberately not deployed:
-# the login is a browser-only demo check, so it must never sit in front of a real Google Ads connection.
+# Render web service: one server for both the dashboard and the Google Ads API behind it.
+# Settings holding secrets are added by hand on Render and never committed. See README.md, "Hosting on Render".
+# Free is fine in test mode. Live mode needs a paid instance: free ones sleep after 15 minutes and the spending cap stops running.
 services:
   - type: web
     name: ads-engine
-    runtime: static
+    runtime: node
+    plan: free
     buildCommand: npm ci --include=dev && npm run build
-    staticPublishPath: dist
+    startCommand: node server/gads-server.mjs
     envVars:
       - key: NODE_VERSION
         value: "22"
-    routes:
-      - type: rewrite
-        source: /*
-        destination: /index.html
+      - key: AE_ENV_FILE
+        value: /etc/secrets/server.env
+      - key: AE_LOGIN_PASSWORD
+        sync: false
+      - key: AE_SESSION_SECRET
+        generateValue: true

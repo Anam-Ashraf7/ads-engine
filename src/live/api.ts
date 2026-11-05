@@ -1,5 +1,6 @@
 // PROTOTYPE: talks to server/gads-server.mjs through the Vite proxy at /api. The server runs in test mode (a Google Ads
 // test account) or live mode (real accounts on its allowlist). Everything else in the mockup stays on made-up data.
+import { sessionEnded } from '../Login';
 
 export interface StepResult {
   ok: boolean;
@@ -63,7 +64,9 @@ export async function call(method: 'GET' | 'POST', path: string, body?: Record<s
     });
     const text = await r.text();
     try {
-      return JSON.parse(text) as StepResult;
+      const out = JSON.parse(text) as StepResult;
+      if (out.signedOut) sessionEnded();
+      return out;
     } catch {
       return offline(path, t0, `The Google Ads server isn't answering (HTTP ${r.status}). Start it with "npm run dev:live".`);
     }

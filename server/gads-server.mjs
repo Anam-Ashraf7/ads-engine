@@ -21,6 +21,7 @@ import { createServer } from 'node:http';
 import { appendFileSync, existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { dirname, isAbsolute, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createGate, hostingConfig, serveDashboard } from './hosting.mjs';
 import { createMeta, metaConfig } from './meta.mjs';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -45,7 +46,7 @@ function loadEnv() {
   const mode = (env.MODE || 'test').toLowerCase();
   if (mode !== 'test' && mode !== 'live') throw new Error(`server/.env.local: MODE must be test or live, not "${env.MODE}"`);
   for (const k of ['CLIENT_FILE', 'TOKEN_FILE']) if (!env[k]) throw new Error(`server/.env.local: ${k} is not set`);
-  const common = { mode, clientFile: path(env.CLIENT_FILE), tokenFile: path(env.TOKEN_FILE), port: Number(process.env.AE_PORT || env.PORT || 5190) }; // AE_PORT: run a second copy beside a running one
+  const common = { mode, clientFile: path(env.CLIENT_FILE), tokenFile: path(env.TOKEN_FILE), port: Number(process.env.AE_PORT || process.env.PORT || env.PORT || 5190) }; // AE_PORT: run a second copy beside a running one. PORT: set by Render
   if (mode === 'test') {
     for (const k of ['MANAGER_ID', 'CUSTOMER_ID']) if (!env[k]) throw new Error(`server/.env.local: ${k} is not set`);
     return { ...common, prefix: 'ae-apitest-', loginId: id(env.MANAGER_ID), managerId: id(env.MANAGER_ID), accounts: [id(env.CUSTOMER_ID)], maxDaily: 5, monthlyCap: null, capEveryHours: 0, capFirstRunSeconds: 0 };
@@ -79,11 +80,18 @@ try {
 }
 const LIVE = cfg.mode === 'live';
 const PREFIX = cfg.prefix;
-const oauth = JSON.parse(readFileSync(cfg.clientFile, 'utf8')).installed;
+const hosting = hostingConfig();
+if (hosting.problem) {
+  console.error('Not starting:', hosting.problem);
+  process.exit(1);
+}
+const gate = createGate(hosting);
+const client = JSON.parse(readFileSync(cfg.clientFile, 'utf8'));
+const oauth = client.web ?? client.installed;
 const refreshToken = readFileSync(cfg.tokenFile, 'utf8').trim();
 
 // Anything that leaves this process goes through redact(), so a secret can't slip into a reply or a log line.
-const SECRETS = [oauth.client_secret, refreshToken];
+const SECRETS = [oauth.client_secret, refreshToken, hosting.password, hosting.secret];
 
 // Meta ads: off until META_ENABLED=true (server/meta.mjs). A bad setting stops Meta only, never Google Ads.
 const metaLogFile = (d = new Date()) => resolve(HERE, 'logs', `meta-cap-${d.toISOString().slice(0, 7)}.jsonl`);
@@ -746,6 +754,8 @@ function send(res, code, obj) {
 
 const server = createServer(async (req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
+  if (await gate(req, res, url)) return;
+  if (!url.pathname.startsWith('/api/')) return serveDashboard(req, res, url, resolve(HERE, '..', 'dist'));
   const route = ROUTES.find(([m, re]) => m === req.method && re.test(url.pathname));
   if (!route) return send(res, 404, { ok: false, summary: `No such endpoint: ${req.method} ${url.pathname}` });
   let body = {};
@@ -807,8 +817,8 @@ try {
     // Refuse to start unless both accounts are test accounts.
     const m = await assertTestAccount(cfg.managerId);
     const c = await assertTestAccount(cfg.accounts[0]);
-    server.listen(cfg.port, '127.0.0.1', () => {
-      console.log(`Google Ads TEST server on http://127.0.0.1:${cfg.port}`);
+    server.listen(cfg.port, hosting.host, () => {
+      console.log(`Google Ads TEST server on http://${hosting.host}:${cfg.port}`);
       console.log(`  manager ${m.id} "${m.descriptiveName}" (test account)`);
       console.log(`  client  ${c.id} "${c.descriptiveName}" (test account, ${c.currencyCode})`);
     });
@@ -826,8 +836,8 @@ try {
       }
     }
     console.log(`  login-customer-id: ${cfg.loginId ?? '(none)'} · max daily budget ${cfg.maxDaily} · monthly cap ${cfg.monthlyCap} per account · cap check every ${cfg.capEveryHours} h`);
-    server.listen(cfg.port, '127.0.0.1', () => {
-      console.log(`Google Ads LIVE server on http://127.0.0.1:${cfg.port}`);
+    server.listen(cfg.port, hosting.host, () => {
+      console.log(`Google Ads LIVE server on http://${hosting.host}:${cfg.port}`);
       startCapJob();
     });
   }

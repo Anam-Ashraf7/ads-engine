@@ -12,7 +12,8 @@
     "server": "node server/gads-server.mjs",
     "dev:live": "node server/dev-live.mjs",
     "login": "node server/login.mjs",
-    "test:meta": "node --test server/meta.test.mjs"
+    "test:meta": "node --test server/meta.test.mjs",
+    "test:hosting": "node --test server/hosting.test.mjs"
   },
   "dependencies": {
     "@fontsource-variable/archivo": "^5.2.5",

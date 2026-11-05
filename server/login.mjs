@@ -15,16 +15,29 @@ for (const line of readFileSync(resolve(HERE, '.env.local'), 'utf8').split(/\r?\
   if (m) env[m[1]] = m[2];
 }
 const path = (p) => (isAbsolute(p) ? p : resolve(HERE, p));
-const oauth = JSON.parse(readFileSync(path(env.CLIENT_FILE), 'utf8')).installed;
+const client = JSON.parse(readFileSync(path(env.CLIENT_FILE), 'utf8'));
+const oauth = client.web ?? client.installed;
+if (!oauth) {
+  console.error('CLIENT_FILE is not a Google OAuth client file. Download it again from Google Console > Credentials.');
+  process.exit(1);
+}
 const tokenFile = path(env.TOKEN_FILE);
+// A Web client only accepts a redirect address registered in Google Console, so the port can't change between logins.
+const loginPort = Number(env.LOGIN_PORT || 5191);
 
 const verifier = randomBytes(32).toString('base64url');
 const challenge = createHash('sha256').update(verifier).digest('base64url');
 const state = randomBytes(16).toString('hex');
 
 const server = createServer();
-await new Promise((r) => server.listen(0, '127.0.0.1', r));
-const redirectUri = `http://127.0.0.1:${server.address().port}`;
+await new Promise((r) => {
+  server.once('error', (err) => {
+    console.error(err.code === 'EADDRINUSE' ? `Port ${loginPort} is already in use. Close whatever is using it, or set LOGIN_PORT in server/.env.local and register the new address in Google Console.` : err.message);
+    process.exit(1);
+  });
+  server.listen(loginPort, '127.0.0.1', r);
+});
+const redirectUri = `http://127.0.0.1:${loginPort}`;
 const url =
   `${oauth.auth_uri}?` +
   new URLSearchParams({

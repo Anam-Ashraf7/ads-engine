@@ -28,6 +28,16 @@ Then open http://127.0.0.1:5180/api-check and press **Run all checks**, or use P
 - **What a test account can't show:** spend, clicks, conversions and Quality Score stay at zero because the ads never run. Real numbers need a real account, which needs Explorer or Basic API access for the Cloud project.
 - **Saved login expired?** (`invalid_grant`): run `npm run login`, sign in, then start `npm run dev:live` again.
 
+## Hosting on Render
+
+One web service runs both the dashboard and the API (`render.yaml`). `npm run login` still runs on a laptop: it saves a Google login once, and that file is uploaded to Render.
+
+- **Build:** `npm ci --include=dev && npm run build`. **Start:** `node server/gads-server.mjs`. **Root Directory:** empty.
+- **Environment variables:** `NODE_VERSION=22`, `AE_ENV_FILE=/etc/secrets/server.env`, `AE_LOGIN_PASSWORD` (12+ characters), `AE_SESSION_SECRET` (32+ random characters). The server refuses to start on Render without the last two.
+- **Secret files:** `server.env` (settings from `server/.env.example`, with `CLIENT_FILE=/etc/secrets/client.json` and `TOKEN_FILE=/etc/secrets/refresh-token`), `client.json`, `refresh-token`.
+- **Login:** the name is `admin` (`AE_LOGIN_NAME` changes it). The server checks the password and every `/api` route needs its cookie. Locally, with no password set, there is no login.
+- **Live mode needs a paid instance:** free instances sleep after 15 minutes with no visitors, and the spending cap doesn't run while asleep. Logs in `server/logs` are lost on restart without a persistent disk.
+
 ## Switching to a real account (live mode)
 
 The same server has a **live mode** for real Google Ads accounts. It touches nothing until you list an account.

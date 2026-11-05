@@ -1,10 +1,9 @@
-// PROTOTYPE: one fixed demo login, checked in the browser. It keeps casual visitors out of a demo; it is not real security.
-import { useState, type FormEvent, type ReactNode } from 'react';
+// The login. The server checks the password and sets a cookie the page can't read; every /api request needs that cookie.
+// The note in localStorage only decides whether "/" opens the app or the public home page. It unlocks nothing.
+import { useEffect, useState, type FormEvent, type ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { BrandMark } from './icons';
 
-const DEMO_NAME = 'admin';
-const DEMO_PASSWORD = 'work';
 const KEY = 'ae.signedIn';
 
 export function isSignedIn() {
@@ -15,36 +14,78 @@ export function isSignedIn() {
   }
 }
 
-export function signOut() {
+function remember(on: boolean) {
   try {
-    localStorage.removeItem(KEY);
+    if (on) localStorage.setItem(KEY, '1');
+    else localStorage.removeItem(KEY);
   } catch {
-    /* nothing saved, so the reload below still shows the login */
+    /* private window: "/" shows the home page, and the Log in link still works */
   }
-  location.reload();
+}
+
+export async function signOut() {
+  try {
+    await fetch('/api/logout', { method: 'POST' });
+  } catch {
+    /* no connection: the note below is still cleared, and the cookie runs out by itself */
+  }
+  remember(false);
+  location.assign('/');
+}
+
+/** The server said this browser isn't logged in. */
+export function sessionEnded() {
+  remember(false);
+  if (location.pathname !== '/login') location.assign('/login');
+}
+
+async function askSession(): Promise<boolean> {
+  try {
+    const r = await fetch('/api/session');
+    return !!(await r.json()).signedIn;
+  } catch {
+    // Vite with no API server behind it, showing sample data only. A built site never takes this path.
+    return import.meta.env.DEV;
+  }
 }
 
 export function LoginGate({ children }: { children: ReactNode }) {
   const { pathname } = useLocation();
-  const [signedIn, setSignedIn] = useState(isSignedIn);
+  const [signedIn, setSignedIn] = useState<boolean | null>(null);
   const [name, setName] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState('');
+  const [sending, setSending] = useState(false);
 
+  useEffect(() => {
+    askSession().then((on) => {
+      remember(on);
+      // The note was out of date: the session ran out, so "/" goes back to the public home page.
+      if (!on && location.pathname === '/') location.reload();
+      else setSignedIn(on);
+    });
+  }, []);
+
+  if (signedIn === null) return null;
   if (signedIn) return pathname === '/login' ? <Navigate to="/" replace /> : <>{children}</>;
 
-  const submit = (e: FormEvent) => {
+  const submit = async (e: FormEvent) => {
     e.preventDefault();
-    if (name.trim().toLowerCase() !== DEMO_NAME || password !== DEMO_PASSWORD) {
-      setError(true);
-      return;
-    }
+    setSending(true);
+    setError('');
     try {
-      localStorage.setItem(KEY, '1');
+      const r = await fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name, password }) });
+      const out = await r.json();
+      if (r.ok && out.ok) {
+        remember(true);
+        setSignedIn(true);
+      } else {
+        setError(out.summary ?? 'Could not log in.');
+      }
     } catch {
-      /* private window: stays signed in until the page reloads */
+      setError("Can't reach the server. Try again in a minute.");
     }
-    setSignedIn(true);
+    setSending(false);
   };
 
   return (
@@ -65,11 +106,11 @@ export function LoginGate({ children }: { children: ReactNode }) {
         </label>
         {error && (
           <p className="login-error" role="alert">
-            That name or password is wrong.
+            {error}
           </p>
         )}
-        <button className="btn primary login-submit" type="submit">
-          Log in
+        <button className="btn primary login-submit" type="submit" disabled={sending}>
+          {sending ? 'Logging in…' : 'Log in'}
         </button>
       </form>
     </main>
